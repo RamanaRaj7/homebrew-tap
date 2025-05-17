@@ -28,41 +28,64 @@ class MacWatcher < Formula
     system "#{bin}/mac-watcher", "--dependencies"
   end
   
-  # Use on_macos to ensure this only runs on macOS
-  on_macos do
-    def pre_uninstall
-      # Stop sleepwatcher service if it's running
-      system "brew", "services", "stop", "sleepwatcher" rescue nil
-      
-      # Remove configuration files - expand HOME variable to ensure it works
-      home = ENV["HOME"]
-      system "rm", "-f", "#{home}/.wakeup"
-      system "rm", "-f", "#{home}/.config/monitor.conf"
-      
-      # Remove any lingering symlinks
-      system "rm", "-f", "/usr/local/bin/mac-watcher"
-      
-      puts "Removed Mac-Watcher configuration files and scripts."
-    end
+  # Standard pre_uninstall hook
+  def pre_uninstall
+    require "fileutils"
+    
+    # Stop sleepwatcher service if it's running
+    system "brew", "services", "stop", "sleepwatcher" rescue nil
+    
+    # Remove configuration files - expand HOME variable to ensure it works
+    home = ENV["HOME"]
+    FileUtils.rm_f("#{home}/.wakeup")
+    FileUtils.rm_f("#{home}/.config/monitor.conf")
+    FileUtils.rm_rf("#{home}/.config/mac-watcher")
+    
+    # Remove any lingering symlinks
+    FileUtils.rm_f("/usr/local/bin/mac-watcher")
+    
+    # Add logging for debugging
+    puts "Mac-Watcher: pre_uninstall complete - removed configuration files"
+    puts "Checked and removed: #{home}/.wakeup, #{home}/.config/monitor.conf"
   end
   
   # Add a more robust uninstall hook as a backup
   def post_uninstall
+    require "fileutils"
+    
     # This is a backup to ensure cleanup happens
     home = ENV["HOME"]
-    system "rm", "-f", "#{home}/.wakeup"
-    system "rm", "-f", "#{home}/.config/monitor.conf"
     
-    # Remove any directories created by mac-watcher
-    system "rm", "-rf", "#{home}/.config/mac-watcher"
+    # Clean up all possible files and directories
+    [
+      "#{home}/.wakeup",
+      "#{home}/.config/monitor.conf",
+      "#{home}/.config/mac-watcher",
+      "/usr/local/bin/mac-watcher"
+    ].each do |path|
+      if File.directory?(path)
+        FileUtils.rm_rf(path)
+      elsif File.exist?(path)
+        FileUtils.rm_f(path)
+      end
+    end
     
-    # Remove any lingering symlinks
-    system "rm", "-f", "/usr/local/bin/mac-watcher"
+    # Create a cleanup script to run as the user
+    cleanup_script = "#{Dir.tmpdir}/mac-watcher-cleanup.sh"
+    File.open(cleanup_script, "w") do |f|
+      f.puts "#!/bin/bash"
+      f.puts "rm -f ~/.wakeup ~/.config/monitor.conf"
+      f.puts "rm -rf ~/.config/mac-watcher"
+    end
+    
+    FileUtils.chmod(0755, cleanup_script)
+    system cleanup_script
+    FileUtils.rm_f(cleanup_script)
     
     # Stop sleepwatcher service if it's running and not needed
-    system %Q(ps aux | grep -q "[s]leepwatcher" && brew services stop sleepwatcher || true)
+    system "pgrep -x sleepwatcher >/dev/null && brew services stop sleepwatcher || true"
     
-    puts "Cleaned up any remaining Mac-Watcher files."
+    puts "Mac-Watcher: post_uninstall complete - cleaned up all files"
   end
 
   def caveats
