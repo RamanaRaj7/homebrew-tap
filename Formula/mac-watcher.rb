@@ -28,18 +28,41 @@ class MacWatcher < Formula
     system "#{bin}/mac-watcher", "--dependencies"
   end
   
-  def pre_uninstall
-    # Stop sleepwatcher service if it's running
-    system "brew", "services", "stop", "sleepwatcher" rescue nil
+  # Use on_macos to ensure this only runs on macOS
+  on_macos do
+    def pre_uninstall
+      # Stop sleepwatcher service if it's running
+      system "brew", "services", "stop", "sleepwatcher" rescue nil
+      
+      # Remove configuration files - expand HOME variable to ensure it works
+      home = ENV["HOME"]
+      system "rm", "-f", "#{home}/.wakeup"
+      system "rm", "-f", "#{home}/.config/monitor.conf"
+      
+      # Remove any lingering symlinks
+      system "rm", "-f", "/usr/local/bin/mac-watcher"
+      
+      puts "Removed Mac-Watcher configuration files and scripts."
+    end
+  end
+  
+  # Add a more robust uninstall hook as a backup
+  def post_uninstall
+    # This is a backup to ensure cleanup happens
+    home = ENV["HOME"]
+    system "rm", "-f", "#{home}/.wakeup"
+    system "rm", "-f", "#{home}/.config/monitor.conf"
     
-    # Remove configuration files
-    system "rm", "-f", "#{ENV["HOME"]}/.wakeup"
-    system "rm", "-f", "#{ENV["HOME"]}/.config/monitor.conf"
+    # Remove any directories created by mac-watcher
+    system "rm", "-rf", "#{home}/.config/mac-watcher"
     
     # Remove any lingering symlinks
     system "rm", "-f", "/usr/local/bin/mac-watcher"
     
-    puts "Removed Mac-Watcher configuration files and scripts."
+    # Stop sleepwatcher service if it's running and not needed
+    system %Q(ps aux | grep -q "[s]leepwatcher" && brew services stop sleepwatcher || true)
+    
+    puts "Cleaned up any remaining Mac-Watcher files."
   end
 
   def caveats
@@ -68,7 +91,11 @@ class MacWatcher < Formula
         mac-watcher --instructions
       
       To completely uninstall and remove all configuration files:
-        brew uninstall mac-watcher
+        brew uninstall ramanaraj7/tap/mac-watcher
+        
+      If you need to manually clean up any files after uninstall:
+        rm -f ~/.wakeup ~/.config/monitor.conf
+        rm -rf ~/.config/mac-watcher
     EOS
   end
   
