@@ -40,7 +40,6 @@ class MacWatcher < Formula
     puts "  # Remove configuration files"
     puts "  rm -f ~/.wakeup"
     puts "  rm -f ~/.config/monitor.conf"
-    puts "  rm -rf ~/.config/mac-watcher"
     puts ""
     puts "  # Remove symlinks (if any)"
     puts "  rm -f /usr/local/bin/mac-watcher"
@@ -82,7 +81,6 @@ class MacWatcher < Formula
         # Manually remove all configuration files
         rm -f ~/.wakeup
         rm -f ~/.config/monitor.conf
-        rm -rf ~/.config/mac-watcher
     EOS
   end
   
