@@ -75,4 +75,4 @@ class MacWatcher < Formula
   test do
     system "#{bin}/mac-watcher", "--help"
   end
-end
+end 
