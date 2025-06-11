@@ -25,12 +25,10 @@ class Loginwatcher < Formula
   end
 
   service do
-    # Point directly to the binary copy we made
-    run [opt_bin/"loginwatcher.bin"]
+    run opt_bin/"loginwatcher.bin"
     keep_alive true
     log_path "/tmp/loginwatcher.log"
     error_log_path "/tmp/loginwatcher.err"
-    plist_name "homebrew.mxcl.loginwatcher"
   end
 
   def caveats
@@ -49,4 +47,4 @@ class Loginwatcher < Formula
   test do
     assert_match "Loginwatcher version", shell_output("#{bin}/loginwatcher --version")
   end
-end 
+end
